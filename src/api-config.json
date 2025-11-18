@@ -1,0 +1,45 @@
+{
+  "api": {
+    "base_url": "http://8.218.206.57/api/v1",
+    "timeout": 10000,
+    "retry": 3
+  },
+  "endpoints": {
+    "auth": {
+      "login": "/auth/login",
+      "register": "/auth/register",
+      "verify": "/auth/verify"
+    },
+    "node": {
+      "register": "/compute/clients/register",
+      "heartbeat": "/compute/clients/heartbeat",
+      "info": "/compute/nodes/{nodeId}"
+    },
+    "task": {
+      "pull": "/compute/tasks/pull",
+      "submit": "/compute/tasks/result",
+      "history": "/compute/tasks/history"
+    },
+    "earnings": {
+      "get": "/users/earnings",
+      "history": "/users/earnings/history"
+    },
+    "wallet": {
+      "info": "/blockchain/wallet/info",
+      "balance": "/blockchain/wallet/balance"
+    },
+    "referral": {
+      "info": "/referral/info",
+      "stats": "/referral/stats"
+    }
+  },
+  "intervals": {
+    "heartbeat": 30000,
+    "pull_tasks": 30000,
+    "update_dashboard": 5000
+  },
+  "test_credentials": {
+    "email": "admin@aip.com",
+    "note": "仅用于测试，生产环境请使用真实账户"
+  }
+}

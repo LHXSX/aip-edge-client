@@ -1,0 +1,91 @@
+#!/usr/bin/expect -f
+
+set timeout 300
+
+puts "╔══════════════════════════════════════════════════════════════╗"
+puts "║     📤 自动上传客户端到生产服务器                             ║"
+puts "╚══════════════════════════════════════════════════════════════╝"
+puts ""
+
+# 1. 上传Web包
+puts "📤 1/4 上传Web包到downloads目录..."
+spawn scp /Users/pd/ai算力/aip-edge-tauri/aip-edge-client-web-v1.0.0.tar.gz root@8.218.206.57:/var/www/html/downloads/
+expect {
+    "password:" {
+        send "Pangdashuai1.\r"
+        expect eof
+    }
+    "yes/no" {
+        send "yes\r"
+        expect "password:"
+        send "Pangdashuai1.\r"
+        expect eof
+    }
+}
+puts "✅ Web包上传完成"
+sleep 1
+
+# 2. 上传源文件到client目录
+puts "📤 2/4 上传源文件到client目录..."
+spawn rsync -avz /Users/pd/ai算力/aip-edge-tauri/src/ root@8.218.206.57:/var/www/html/client/
+expect {
+    "password:" {
+        send "Pangdashuai1.\r"
+        expect eof
+    }
+    "yes/no" {
+        send "yes\r"
+        expect "password:"
+        send "Pangdashuai1.\r"
+        expect eof
+    }
+}
+puts "✅ 源文件上传完成"
+sleep 1
+
+# 3. 上传下载页面
+puts "📤 3/4 上传下载页面..."
+spawn scp /Users/pd/ai算力/frontend/website/client-download.html root@8.218.206.57:/var/www/html/
+expect {
+    "password:" {
+        send "Pangdashuai1.\r"
+        expect eof
+    }
+    "yes/no" {
+        send "yes\r"
+        expect "password:"
+        send "Pangdashuai1.\r"
+        expect eof
+    }
+}
+puts "✅ 下载页面上传完成"
+sleep 1
+
+# 4. 设置权限
+puts "🔧 4/4 设置文件权限..."
+spawn ssh root@8.218.206.57 "chmod -R 755 /var/www/html/client /var/www/html/downloads && chown -R www-data:www-data /var/www/html/client /var/www/html/downloads && ls -lh /var/www/html/downloads/aip-edge-client-web-v1.0.0.tar.gz"
+expect {
+    "password:" {
+        send "Pangdashuai1.\r"
+        expect eof
+    }
+    "yes/no" {
+        send "yes\r"
+        expect "password:"
+        send "Pangdashuai1.\r"
+        expect eof
+    }
+}
+puts "✅ 权限设置完成"
+
+puts ""
+puts "╔══════════════════════════════════════════════════════════════╗"
+puts "║     ✅ 所有文件上传完成！                                     ║"
+puts "╚══════════════════════════════════════════════════════════════╝"
+puts ""
+puts "🌐 访问地址："
+puts "   • http://www.pidbai.com/client"
+puts "   • http://8.218.206.57/client"
+puts "   • http://www.pidbai.com/client-download.html"
+puts ""
+

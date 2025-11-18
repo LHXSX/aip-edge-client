@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Tauri 实时编译进度</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: white;
+            padding: 40px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 40px;
+        }
+        h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 25px 0;
+        }
+        .stat {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #a5b4fc;
+        }
+        .stat-label {
+            font-size: 11px;
+            color: rgba(255,255,255,0.6);
+            margin-top: 8px;
+            text-transform: uppercase;
+        }
+        .progress-bar {
+            height: 45px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 22px;
+            overflow: hidden;
+            position: relative;
+            margin: 25px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.5s ease;
+            box-shadow: 0 0 20px rgba(102,126,234,0.5);
+        }
+        .progress-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            line-height: 45px;
+            font-weight: 700;
+            font-size: 16px;
+        }
+        .log-container {
+            background: rgba(15,23,42,0.8);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 20px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        .log-line {
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+        .log-line.download { color: #60a5fa; }
+        .log-line.compile { color: #10b981; }
+        .log-line.finished { color: #fbbf24; font-weight: 600; }
+        .log-line.error { color: #ef4444; }
+        .status-badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 16px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .status-badge.working {
+            background: rgba(96,165,250,0.2);
+            color: #60a5fa;
+        }
+        .status-badge.done {
+            background: rgba(16,185,129,0.2);
+            color: #10b981;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ Tauri 编译实时监控</h1>
+        <div class="status-badge working" id="status-badge">
+            <span class="spinner"></span>
+            <span id="status-text">正在编译...</span>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+            <div class="progress-text" id="progress-text">0%</div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="downloaded">0</div>
+                <div class="stat-label">已下载</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="compiled">0</div>
+                <div class="stat-label">已编译</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="progress-percent">0%</div>
+                <div class="stat-label">完成度</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="eta">--</div>
+                <div class="stat-label">预计剩余</div>
+            </div>
+        </div>
+        
+        <h3 style="margin-bottom: 15px; color: rgba(255,255,255,0.9);">📝 编译日志（实时更新）</h3>
+        <div class="log-container" id="logs">
+            <div class="log-line">等待日志...</div>
+        </div>
+        
+        <div style="margin-top: 25px; font-size: 13px; color: rgba(255,255,255,0.6);">
+            <p>💡 提示：页面每秒自动刷新</p>
+            <p>✅ 使用国内镜像源（中科大）加速</p>
+            <p>🚀 完成后将自动启动 Tauri 原生应用</p>
+        </div>
+    </div>
+    
+    <script>
+        let startTime = Date.now();
+        
+        async function updateProgress() {
+            try {
+                // 获取状态
+                const statusResp = await fetch('http://localhost:9000/status');
+                const status = await statusResp.json();
+                
+                // 获取日志
+                const logsResp = await fetch('http://localhost:9000/logs');
+                const logs = await logsResp.text();
+                
+                // 更新统计
+                document.getElementById('downloaded').textContent = status.downloaded;
+                document.getElementById('compiled').textContent = status.compiled;
+                document.getElementById('progress-percent').textContent = Math.round(status.progress) + '%';
+                
+                // 更新进度条
+                document.getElementById('progress-fill').style.width = status.progress + '%';
+                document.getElementById('progress-text').textContent = Math.round(status.progress) + '%';
+                
+                // 计算预计剩余时间
+                const elapsed = (Date.now() - startTime) / 1000;
+                if (status.progress > 10) {
+                    const totalTime = elapsed / (status.progress / 100);
+                    const remaining = Math.max(0, totalTime - elapsed);
+                    document.getElementById('eta').textContent = Math.round(remaining) + '秒';
+                }
+                
+                // 更新日志
+                const logLines = logs.split('\n').filter(l => l.trim()).slice(-30);
+                const logsHtml = logLines.map(line => {
+                    let className = 'log-line';
+                    if (line.includes('Downloaded')) className += ' download';
+                    if (line.includes('Compiling')) className += ' compile';
+                    if (line.includes('Finished')) className += ' finished';
+                    if (line.includes('error') || line.includes('Error')) className += ' error';
+                    return `<div class="${className}">${escapeHtml(line)}</div>`;
+                }).join('');
+                
+                document.getElementById('logs').innerHTML = logsHtml || '<div class="log-line">等待日志...</div>';
+                
+                // 自动滚动到底部
+                const logContainer = document.getElementById('logs');
+                logContainer.scrollTop = logContainer.scrollHeight;
+                
+                // 更新状态
+                if (status.finished) {
+                    document.getElementById('status-badge').className = 'status-badge done';
+                    document.getElementById('status-text').textContent = '编译完成！';
+                    document.querySelector('.spinner').style.display = 'none';
+                    document.getElementById('eta').textContent = '0秒';
+                    
+                    setTimeout(() => {
+                        alert('🎉 编译完成！Tauri 应用即将启动...');
+                    }, 1000);
+                } else if (status.compiled > 0) {
+                    document.getElementById('status-text').textContent = '正在编译组件...';
+                } else if (status.downloaded > 0) {
+                    document.getElementById('status-text').textContent = '正在下载依赖...';
+                }
+                
+            } catch (e) {
+                document.getElementById('logs').innerHTML = `<div class="log-line error">无法连接到日志服务器: ${e.message}</div>`;
+            }
+        }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // 每秒更新一次
+        setInterval(updateProgress, 1000);
+        updateProgress();
+    </script>
+</body>
+</html>
+

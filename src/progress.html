@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Tauri 编译进度</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: white;
+            padding: 40px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 40px;
+        }
+        h1 { font-size: 32px; margin-bottom: 20px; }
+        .progress-bar {
+            height: 40px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 20px;
+            margin: 20px 0;
+            position: relative;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s;
+            box-shadow: 0 0 20px rgba(102,126,234,0.5);
+        }
+        .progress-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            line-height: 40px;
+            font-weight: 600;
+        }
+        .status { 
+            font-size: 18px; 
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ Tauri 编译进度</h1>
+        <div class="status" id="status">
+            <span class="spinner"></span>
+            正在编译中...
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress"></div>
+            <div class="progress-text" id="progress-text">0%</div>
+        </div>
+        <div style="margin-top: 30px; font-size: 14px; color: rgba(255,255,255,0.7);">
+            <p>⏳ 编译进度会自动更新</p>
+            <p>✅ 使用国内镜像源加速</p>
+            <p>🚀 预计 2-3 分钟完成</p>
+            <p style="margin-top: 20px;">
+                完成后 Tauri 原生应用会自动启动<br>
+                或访问 <a href="/" style="color: #a5b4fc;">客户端 UI 预览</a>
+            </p>
+        </div>
+    </div>
+    
+    <script>
+        let progress = 0;
+        const totalSteps = 100;
+        
+        // 模拟进度（每秒增加）
+        setInterval(() => {
+            if (progress < 95) {
+                progress += Math.random() * 3;
+                if (progress > 95) progress = 95;
+                
+                document.getElementById('progress').style.width = progress + '%';
+                document.getElementById('progress-text').textContent = Math.round(progress) + '%';
+                
+                if (progress > 90) {
+                    document.getElementById('status').innerHTML = 
+                        '<span class="spinner"></span> 即将完成...';
+                } else if (progress > 50) {
+                    document.getElementById('status').innerHTML = 
+                        '<span class="spinner"></span> 正在编译核心组件...';
+                } else {
+                    document.getElementById('status').innerHTML = 
+                        '<span class="spinner"></span> 正在下载依赖...';
+                }
+            }
+        }, 1000);
+        
+        // 检查编译是否完成
+        setInterval(async () => {
+            try {
+                // 尝试访问 Tauri 应用端口
+                const response = await fetch('http://localhost:1420', {mode: 'no-cors'});
+                // 如果能访问，说明编译完成
+                document.getElementById('status').innerHTML = '✅ 编译完成！';
+                document.getElementById('progress').style.width = '100%';
+                document.getElementById('progress-text').textContent = '100%';
+                document.querySelector('.spinner').style.display = 'none';
+                
+                setTimeout(() => {
+                    alert('🎉 Tauri 应用已启动！窗口即将出现...');
+                }, 500);
+            } catch (e) {
+                // 还在编译中
+            }
+        }, 2000);
+    </script>
+</body>
+</html>
+
