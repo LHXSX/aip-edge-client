@@ -1,0 +1,74 @@
+/* 画质优化 - 修复模糊和失真 */
+
+/* 高清渲染 */
+* {
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+    text-rendering: optimizeLegibility !important;
+    font-smooth: always !important;
+}
+
+/* 禁用模糊滤镜导致的失真 */
+body, html {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+}
+
+/* 文字清晰度 */
+h1, h2, h3, h4, h5, h6, p, span, div {
+    text-shadow: none !important;
+    letter-spacing: 0.01em;
+}
+
+/* 按钮文字清晰 */
+button {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-weight: 600;
+}
+
+/* 输入框文字清晰 */
+input, textarea, select {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+/* Canvas高清渲染 */
+canvas {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+    image-rendering: pixelated;
+}
+
+/* 表格文字清晰 */
+table {
+    border-collapse: collapse;
+    text-rendering: optimizeLegibility;
+}
+
+/* 卡片边缘清晰 */
+.dashboard-card {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+/* 移除可能导致模糊的transform */
+.glass-card {
+    transform: none !important;
+}
+
+/* 确保文字不模糊 */
+.title, .subtitle, .stat-value, .stat-label {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+}
+
+/* 修复Retina屏幕模糊 */
+@media only screen and (-webkit-min-device-pixel-ratio: 2),
+       only screen and (min-resolution: 192dpi) {
+    * {
+        -webkit-font-smoothing: subpixel-antialiased !important;
+    }
+}
+
